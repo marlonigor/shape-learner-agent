@@ -1,51 +1,29 @@
-// agent.js
+// agent.js - CORRIGIDO
 
-// Configuração central do agente
 const AGENT_CONFIG = {
-    STORAGE_KEY: 'shapeDataset', // Onde salvamos no LocalStorage 
-    CANVAS_SIZE: 600,            // Tamanho do canvas de desenho
-    CAPTURE_SIZE: 128            // Tamanho que salvaremos para o ML 
+    STORAGE_KEY: 'shapeDataset',
+    CANVAS_SIZE: 600,
+    CAPTURE_SIZE: 224
 };
 
-/**
- * Pega o dataset atual do LocalStorage
- */
 function getDataset() {
     return JSON.parse(localStorage.getItem(AGENT_CONFIG.STORAGE_KEY)) || [];
 }
 
-/**
- * Salva o dataset completo no LocalStorage
- */
 function saveDataset(dataset) {
     localStorage.setItem(AGENT_CONFIG.STORAGE_KEY, JSON.stringify(dataset));
     console.log(`Dataset salvo. Total de ${dataset.length} formas.`);
 }
 
-/**
- * Captura o canvas atual e o formata como um bitmap (imagem base64)
- * no tamanho esperado pelo modelo. [cite: 124, 125]
- * @param {p5.Graphics} mainCanvas - O canvas principal do p5
- */
 function captureBitmap(mainCanvas) {
-    // Cria um buffer gráfico temporário para redimensionar
     let gfx = createGraphics(AGENT_CONFIG.CAPTURE_SIZE, AGENT_CONFIG.CAPTURE_SIZE);
-    
-    // Desenha o canvas principal (mainCanvas) dentro do buffer, redimensionando
+    gfx.background(255);
     gfx.image(mainCanvas, 0, 0, AGENT_CONFIG.CAPTURE_SIZE, AGENT_CONFIG.CAPTURE_SIZE);
-    
-    // Converte o buffer para DataURL (base64 PNG) 
     const bitmap = gfx.canvas.toDataURL('image/png');
-    gfx.remove(); // Limpa a memória
+    gfx.remove();
     return bitmap;
 }
 
-/**
- * Função principal para salvar uma nova forma
- * @param {string} label - O rótulo (ex: "circulo") 
- * @param {Array} points - O vetor de pontos do desenho 
- * @param {p5.Graphics} mainCanvas - O canvas principal do p5
- */
 function saveShape(label, points, mainCanvas) {
     if (!label || label.trim() === "") {
         console.warn("Rótulo (label) não pode ser vazio.");
@@ -54,17 +32,14 @@ function saveShape(label, points, mainCanvas) {
 
     const bitmap = captureBitmap(mainCanvas);
     
-    // Monta o objeto 'Forma' como definido no PRD [cite: 54, 55]
     const newShape = {
-        id: crypto.randomUUID(), // ID único
+        id: crypto.randomUUID(),
         label: label.toLowerCase().trim(),
         bitmap: bitmap,
         points: points,
         createdAt: new Date().toISOString()
-        // O campo 'meta'  pode ser adicionado depois
     };
 
-    // Adiciona ao dataset e salva
     const dataset = getDataset();
     dataset.push(newShape);
     saveDataset(dataset);
@@ -73,12 +48,6 @@ function saveShape(label, points, mainCanvas) {
     updateTrainingStatus(`Forma "${newShape.label}" salva. Total: ${dataset.length}`);
 }
 
-// UI
-
-/**
- * Atualiza a barra de status com uma mensagem.
- * @param {string} message - A mensagem para exibir.
- */
 function updateTrainingStatus(message) {
     const statusEl = document.getElementById('status-bar');
     if (statusEl) {
@@ -86,15 +55,11 @@ function updateTrainingStatus(message) {
     }
 }
 
-/**
- * Renderiza a visualização do dataset na UI.
- */
 function renderDatasetView() {
     const dataset = getDataset();
     const listEl = document.getElementById('dataset-list');
     if (!listEl) return;
 
-    // 1. Agrupar dados por label
     const groups = {};
     for (const shape of dataset) {
         if (!groups[shape.label]) {
@@ -103,19 +68,15 @@ function renderDatasetView() {
         groups[shape.label].push(shape);
     }
 
-    // 2. Limpar a view antiga e renderizar a nova
     listEl.innerHTML = '';
     
-    // 3. Criar HTML para cada grupo
     for (const label in groups) {
         const shapes = groups[label];
         let groupHTML = `<div class="dataset-group">`;
         groupHTML += `<strong>${label}</strong> (${shapes.length}x)`;
         groupHTML += `<div class="mini-grid">`;
         
-        // Mostrar miniaturas
         shapes.forEach(shape => {
-            // Usamos o bitmap salvo como src da imagem
             groupHTML += `<img src="${shape.bitmap}" alt="${label}" title="${shape.id}">`;
         });
         
@@ -128,111 +89,213 @@ function renderDatasetView() {
     }
 }
 
-
-// Machine Learning
-
-let featureExtractor;
-let classifier;
+// Machine Learning com TensorFlow.js PURO
+let mobilenetModel;
+let customModel;
 let isModelReady = false;
+let isClassifying = false;
+let labelMap = {};
+let reverseLabelMap = {};
 
-// Inicializa o FeatureExtractor e o classificador
-function initML() {
-    // 1. Verifica se p5 e ml5 estão no window
+async function initML() {
     if (typeof p5 === 'undefined') {
         console.warn("p5.js ainda não carregou...");
         setTimeout(initML, 300);
         return;
     }
-    if (typeof ml5 === 'undefined') {
-        console.warn("ml5.js ainda não carregou...");
+    if (typeof tf === 'undefined' || typeof mobilenet === 'undefined') {
+        console.warn("TensorFlow.js ainda não carregou...");
         setTimeout(initML, 300);
         return;
     }
 
     updateTrainingStatus("Carregando MobileNet...");
-    console.log("p5 e ml5 detectados! Iniciando ML...");
+    console.log("TensorFlow.js detectado! Iniciando ML...");
 
     try {
-        featureExtractor = ml5.featureExtractor('MobileNet', modelLoaded);
+        mobilenetModel = await mobilenet.load();
+        console.log('MobileNet carregado com sucesso!');
+        isModelReady = true;
+        updateTrainingStatus("Modelo pronto! Salve formas e treine.");
+
+        if (typeof trainButton !== 'undefined' && trainButton && trainButton.elt) {
+            trainButton.removeAttribute('disabled');
+            trainButton.elt.style.opacity = '1';
+            trainButton.elt.style.cursor = 'pointer';
+        }
+
+        renderDatasetView();
     } catch (e) {
         updateTrainingStatus("Erro ao carregar MobileNet: " + e.message);
         console.error(e);
     }
 }
 
-function modelLoaded() {
-    console.log('MobileNet carregado com sucesso!');
-    isModelReady = true;
-    updateTrainingStatus("Modelo pronto! Salve formas e treine.");
-
-    // Prepara o classificador
-    const options = { numLabels: 10 }; // ml5 adapta dinamicamente
-    classifier = featureExtractor.classification(options);
-
-    // [CORREÇÃO] Checamos a variável global 'trainButton' diretamente,
-    // sem usar 'window.'
-    if (trainButton && trainButton.elt) {
-        trainButton.removeAttribute('disabled');
-        trainButton.elt.style.opacity = '1';
-        trainButton.elt.style.cursor = 'pointer';
-    } else {
-        console.warn("modelLoaded: A variável global 'trainButton' não foi encontrada.");
-    }
-
-    renderDatasetView();
-}
-
-/**
- * Treina o modelo de ML usando o dataset salvo no LocalStorage
- */
-async function trainModel() {
-    if (!isModelReady) {
-        updateTrainingStatus("Modelo ainda não está pronto. Aguarde..."); // Mudar status
-        return;
-    }
-    const dataset = getDataset();
-    if (dataset.length < 2) {
-        updateTrainingStatus("Você precisa de pelo menos 2 exemplos salvos para treinar."); // Mudar status
-        return;
-    }
-
-    updateTrainingStatus("Iniciando treinamento... (adicionando exemplos)"); // Mudar status
-    
-    // ... (o loop 'for (const shape of dataset)' continua o mesmo) ...
-    for (const shape of dataset) {
-        let img = createImg(shape.bitmap, 'training image', 'anonymous', () => {
-            classifier.addImage(img, shape.label);
-            img.remove();
-        });
-        img.hide();
-    }
-
-    console.log("Exemplos adicionados. Começando o treino...");
-    updateTrainingStatus("Treinando... (calculando...)"); // Mudar status
-
-    classifier.train((lossValue) => {
-        if (lossValue) {
-            // Isso é chamado a cada época, bom para feedback
-            updateTrainingStatus(`Treinando... Perda (Loss): ${lossValue.toFixed(4)}`);
-            console.log('Perda (Loss):', lossValue);
-        } else {
-            console.log('Treinamento concluído!');
-            updateTrainingStatus('Treinamento concluído!'); // Mudar status
-
-            if (window.recognitionButton && recognitionButton.elt) {
-                recognitionButton.removeAttribute('disabled');
-                recognitionButton.elt.style.opacity = '1';
-                recognitionButton.elt.style.cursor = 'pointer';
-
-            }
-        }
+// Converte bitmap para tensor
+async function bitmapToTensor(bitmap) {
+    return new Promise((resolve, reject) => {
+        const img = new Image();
+        img.crossOrigin = 'anonymous';
+        img.onload = () => {
+            const tensor = tf.browser.fromPixels(img)
+                .resizeBilinear([224, 224])
+                .toFloat()
+                .div(255.0)
+                .expandDims(0);
+            resolve(tensor);
+        };
+        img.onerror = () => reject(new Error("Erro ao carregar imagem"));
+        img.src = bitmap;
     });
 }
 
-/**
- * Atualiza a UI com os resultados da predição
- * @param {Array} results - O array de resultados do ml5
- */
+// ← CORRIGIDO: Extrai features usando MobileNet
+async function extractFeatures(imageTensor) {
+    // O MobileNet do TensorFlow retorna um embedding direto
+    // Usamos o método infer() para pegar as features intermediárias
+    const activation = mobilenetModel.infer(imageTensor, true);
+    return activation;
+}
+
+async function trainModel() {
+    if (!isModelReady) {
+        updateTrainingStatus("Modelo ainda não está pronto. Aguarde...");
+        return;
+    }
+    
+    const dataset = getDataset();
+    if (dataset.length < 2) {
+        updateTrainingStatus("Você precisa de pelo menos 2 exemplos salvos para treinar.");
+        return;
+    }
+
+    updateTrainingStatus("Extraindo features das imagens...");
+    
+    const features = [];
+    const labels = [];
+    const uniqueLabels = [...new Set(dataset.map(s => s.label))];
+    
+    labelMap = {};
+    reverseLabelMap = {};
+    uniqueLabels.forEach((label, idx) => {
+        labelMap[idx] = label;
+        reverseLabelMap[label] = idx;
+    });
+    
+    console.log('Labels encontrados:', uniqueLabels);
+    
+    for (let i = 0; i < dataset.length; i++) {
+        const shape = dataset[i];
+        try {
+            const imageTensor = await bitmapToTensor(shape.bitmap);
+            const feature = await extractFeatures(imageTensor);
+            
+            features.push(feature);
+            labels.push(reverseLabelMap[shape.label]);
+            
+            imageTensor.dispose();
+            
+            console.log(`✓ Features extraídas: ${shape.label} (${i + 1}/${dataset.length})`);
+            updateTrainingStatus(`Extraindo features... ${i + 1}/${dataset.length}`);
+        } catch (err) {
+            console.error(`✗ Erro ao processar ${shape.label}:`, err);
+        }
+    }
+    
+    if (features.length === 0) {
+        updateTrainingStatus("Erro: Nenhuma feature foi extraída.");
+        return;
+    }
+
+    const xs = tf.concat(features);
+    const ys = tf.oneHot(tf.tensor1d(labels, 'int32'), uniqueLabels.length);
+    
+    features.forEach(f => f.dispose());
+    
+    console.log('Shape dos dados:', xs.shape, ys.shape);
+    updateTrainingStatus("Construindo modelo neural...");
+    
+    customModel = tf.sequential({
+        layers: [
+            tf.layers.dense({ units: 128, activation: 'relu', inputShape: [xs.shape[1]] }),
+            tf.layers.dropout({ rate: 0.5 }),
+            tf.layers.dense({ units: uniqueLabels.length, activation: 'softmax' })
+        ]
+    });
+    
+    customModel.compile({
+        optimizer: tf.train.adam(0.001),
+        loss: 'categoricalCrossentropy',
+        metrics: ['accuracy']
+    });
+    
+    console.log('Iniciando treinamento...');
+    updateTrainingStatus("Treinando modelo neural...");
+    
+    try {
+        await customModel.fit(xs, ys, {
+            epochs: 50,
+            batchSize: 8,
+            validationSplit: 0.1,
+            shuffle: true,
+            callbacks: {
+                onEpochEnd: (epoch, logs) => {
+                    console.log(`Epoch ${epoch + 1}: loss = ${logs.loss.toFixed(4)}, acc = ${logs.acc.toFixed(4)}`);
+                    updateTrainingStatus(`Treinando... Epoch ${epoch + 1}/50 - Loss: ${logs.loss.toFixed(4)}`);
+                }
+            }
+        });
+        
+        xs.dispose();
+        ys.dispose();
+        
+        console.log('✓ Treinamento concluído!');
+        updateTrainingStatus('✓ Modelo treinado com sucesso!');
+        
+        if (typeof recognitionButton !== 'undefined' && recognitionButton && recognitionButton.elt) {
+            recognitionButton.removeAttribute('disabled');
+            recognitionButton.elt.style.opacity = '1';
+            recognitionButton.elt.style.cursor = 'pointer';
+        }
+    } catch (err) {
+        updateTrainingStatus("Erro no treinamento: " + err.message);
+        console.error("Erro:", err);
+    }
+}
+
+async function classifyCanvas() {
+    if (!customModel || !isClassifying) return;
+    
+    try {
+        const bitmap = captureBitmap(mainCanvas);
+        const imageTensor = await bitmapToTensor(bitmap);
+        const features = await extractFeatures(imageTensor);
+        
+        const prediction = customModel.predict(features);
+        const probabilities = await prediction.data();
+        
+        const maxProb = Math.max(...probabilities);
+        const maxIndex = probabilities.indexOf(maxProb);
+        const predictedLabel = labelMap[maxIndex];
+        
+        imageTensor.dispose();
+        features.dispose();
+        prediction.dispose();
+        
+        updatePredictionUI([{
+            label: predictedLabel,
+            confidence: maxProb
+        }]);
+        
+    } catch (err) {
+        console.error("Erro na classificação:", err);
+    }
+    
+    if (isClassifying) {
+        setTimeout(classifyCanvas, 500);
+    }
+}
+
 function updatePredictionUI(results) {
     const el = document.getElementById('prediction-output');
     if (!el) return;
@@ -248,28 +311,11 @@ function updatePredictionUI(results) {
     el.innerHTML = `Predição: <strong>${bestResult.label}</strong> (${confidence}%)`;
 }
 
-/**
- * Inicia o loop de classificação
- */
 function loopClassification() {
-    // Se o usuário desligou, para o loop
-    if (!isClassifying || !isModelReady) {
+    if (!isClassifying || !customModel) {
         updatePredictionUI(null);
         return;
     }
-
-    // Classifica a imagem atual do canvas
-    classifier.classify(mainCanvas, (err, results) => {
-        if (err) {
-            console.error(err);
-            return;
-        }
-        
-        // Atualiza a UI com os resultados
-        updatePredictionUI(results);
-        
-        // Chama a si mesmo novamente para criar o loop
-        // Usamos setTimeout para não sobrecarregar o navegador
-        setTimeout(loopClassification, 500); // Classifica a cada 500ms
-    });
+    
+    classifyCanvas();
 }
