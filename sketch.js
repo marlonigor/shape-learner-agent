@@ -3,6 +3,7 @@
 let clearButton;
 let saveButton;
 let trainButton;
+let recognitionButton;
 
 let currentShapePoints = [];
 let mainCanvas;
@@ -28,10 +29,29 @@ function setup() {
     trainButton.elt.style.opacity = '0.5'; // visualmente desabilitado
     trainButton.elt.style.cursor = 'not-allowed';
 
+    recognitionButton = createButton('Iniciar Reconhecimento');
+    recognitionButton.parent('canvas-container');
+    recognitionButton.mousePressed(toggleRecognition);
+    recognitionButton.attribute('disabled', ''); // Desabilitado até o modelo treinar
+    recognitionButton.elt.style.opacity = '0.5';
+    recognitionButton.elt.style.cursor = 'not-allowed';
+
     // Só inicia o ML quando tudo estiver pronto
     setTimeout(initML, 100); // dá um respiro pro DOM
 
     renderDatasetView();
+}
+
+function toggleRecognition() {
+    isClassifying = !isClassifying; // Inverte o estado
+
+    if (isClassifying) {
+        recognitionButton.html('Parar Reconhecimento');
+        loopClassification(); // Inicia o loop (definido no agent.js)
+    } else {
+        recognitionButton.html('Iniciar Reconhecimento');
+        updatePredictionUI(null); // Limpa a UI
+    }
 }
 
 // Função para limpar o canvas

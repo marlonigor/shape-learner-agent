@@ -176,6 +176,13 @@ function modelLoaded() {
         trainButton.elt.style.cursor = 'pointer';
     }
 
+    // Habilita o botão de reconhecimento
+    if (window.recognitionButton && recognitionButton.elt) {
+        recognitionButton.removeAttribute('disabled');
+        recognitionButton.elt.style.opacity = '1';
+        recognitionButton.elt.style.cursor = 'pointer';
+    }
+
     renderDatasetView();
 }
 
@@ -215,6 +222,58 @@ async function trainModel() {
         } else {
             console.log('Treinamento concluído!');
             updateTrainingStatus('Treinamento concluído!'); // Mudar status
+
+            if (window.recognitionButton && recognitionButton.elt) {
+                recognitionButton.removeAttribute('disabled');
+                recognitionButton.elt.style.opacity = '1';
+                recognitionButton.elt.style.cursor = 'pointer';
+
+            }
         }
+    });
+}
+
+/**
+ * Atualiza a UI com os resultados da predição
+ * @param {Array} results - O array de resultados do ml5
+ */
+function updatePredictionUI(results) {
+    const el = document.getElementById('prediction-output');
+    if (!el) return;
+
+    if (!results || !isClassifying) {
+        el.innerHTML = 'Predição: (desligado)';
+        return;
+    }
+
+    const bestResult = results[0];
+    const confidence = Math.floor(bestResult.confidence * 100);
+    
+    el.innerHTML = `Predição: <strong>${bestResult.label}</strong> (${confidence}%)`;
+}
+
+/**
+ * Inicia o loop de classificação
+ */
+function loopClassification() {
+    // Se o usuário desligou, para o loop
+    if (!isClassifying || !isModelReady) {
+        updatePredictionUI(null);
+        return;
+    }
+
+    // Classifica a imagem atual do canvas
+    classifier.classify(mainCanvas, (err, results) => {
+        if (err) {
+            console.error(err);
+            return;
+        }
+        
+        // Atualiza a UI com os resultados
+        updatePredictionUI(results);
+        
+        // Chama a si mesmo novamente para criar o loop
+        // Usamos setTimeout para não sobrecarregar o navegador
+        setTimeout(loopClassification, 500); // Classifica a cada 500ms
     });
 }
