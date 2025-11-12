@@ -4,27 +4,107 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Shape Learner Agent</title>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/tensorflow/3.20.0/tf.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/ml5/0.12.2/ml5.min.js"></script>
+  
   <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.0/p5.min.js"></script>
   
   <style>
+    /* Apenas para centralizar o canvas e a UI */
     body {
-      display: grid;
-      place-items: center;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
       min-height: 100vh;
-      margin: 0;
+      margin: 10px;
       background-color: #f0f0f0;
+      font-family: sans-serif;
     }
+
+    /* Onde o p5.js vai desenhar */
     main {
       border: 1px solid #ccc;
       box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+      /* Para os botões ficarem dentro */
+      padding: 10px;
+      padding-bottom: 10px;
+      background-color: white;
+    }
+    
+    /* PAINEL DA UI (NOVO) */
+    #ui-panel {
+      width: 400px;
+      margin-top: 20px;
+    }
+    
+    /* BARRA DE STATUS (NOVO) */
+    #status-bar {
+      background-color: #eee;
+      padding: 8px 12px;
+      border-radius: 4px;
+      font-family: monospace;
+      margin-bottom: 15px;
+      border: 1px solid #ddd;
+    }
+    
+    /* VISUALIZADOR DO DATASET (NOVO) */
+    #dataset-view h3 {
+      margin-top: 0;
+      margin-bottom: 10px;
+      font-family: sans-serif;
+    }
+    #dataset-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      font-family: sans-serif;
+      max-height: 200px; /* Limita a altura */
+      overflow-y: auto; /* Adiciona scroll se passar */
+      padding: 5px;
+      background-color: #fafafa;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+    }
+    .dataset-group {
+      border: 1px solid #ddd;
+      padding: 8px;
+      border-radius: 4px;
+      background-color: white;
+    }
+    .dataset-group strong {
+      display: block;
+      margin-bottom: 5px;
+    }
+    .dataset-group .mini-grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+    }
+    .dataset-group img {
+      width: 32px;
+      height: 32px;
+      object-fit: cover;
+      border: 1px solid #eee;
     }
   </style>
 </head>
 <body>
+  
   <main id="canvas-container"></main>
 
-  <script src="sketch.js"></script>
+  <div id="ui-panel">
+    <div id="status-bar">Carregando...</div>
+    <div id="dataset-view">
+      <h3>Dataset Salvo</h3>
+      <div id="dataset-list">
+        <p>Carregando dataset...</p>
+      </div>
+    </div>
+  </div>
 
+  <script src="sketch.js"></script>
   <script src="agent.js" defer></script>
+
 </body>
 </html>

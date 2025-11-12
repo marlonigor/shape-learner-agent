@@ -72,3 +72,122 @@ function saveShape(label, points, mainCanvas) {
     console.log('Nova forma salva:', newShape.label, newShape.id);
     alert(`Forma "${newShape.label}" salva!`);
 }
+
+// UI
+
+/**
+ * Atualiza a barra de status com uma mensagem.
+ * @param {string} message - A mensagem para exibir.
+ */
+function updateTrainingStatus(message) {
+    const statusEl = document.getElementById('status-bar');
+    if (statusEl) {
+        statusEl.innerText = message;
+    }
+}
+
+/**
+ * Renderiza a visualização do dataset na UI.
+ */
+function renderDatasetView() {
+    const dataset = getDataset();
+    const listEl = document.getElementById('dataset-list');
+    if (!listEl) return;
+
+    // 1. Agrupar dados por label
+    const groups = {};
+    for (const shape of dataset) {
+        if (!groups[shape.label]) {
+            groups[shape.label] = [];
+        }
+        groups[shape.label].push(shape);
+    }
+
+    // 2. Limpar a view antiga e renderizar a nova
+    listEl.innerHTML = '';
+    
+    // 3. Criar HTML para cada grupo
+    for (const label in groups) {
+        const shapes = groups[label];
+        let groupHTML = `<div class="dataset-group">`;
+        groupHTML += `<strong>${label}</strong> (${shapes.length}x)`;
+        groupHTML += `<div class="mini-grid">`;
+        
+        // Mostrar miniaturas
+        shapes.forEach(shape => {
+            // Usamos o bitmap salvo como src da imagem
+            groupHTML += `<img src="${shape.bitmap}" alt="${label}" title="${shape.id}">`;
+        });
+        
+        groupHTML += `</div></div>`;
+        listEl.innerHTML += groupHTML;
+    }
+
+    if (Object.keys(groups).length === 0) {
+        listEl.innerHTML = '<p>Nenhuma forma salva ainda.</p>';
+    }
+}
+
+
+// Machine Learning
+
+let featureExtractor;
+let classifier;
+let isModelReady = false;
+
+// Inicializa o FeatureExtractor e o classificador
+function initML(){
+    updateTrainingStatus("Carregando modelo base...");
+    console.log("Iniciando ML...");
+
+    // Usa o MobileNet para extrair features [cite: 65, 127]
+    featureExtractor = ml5.featureExtractor('MobileNet', () => {
+        console.log('MobileNet (FeatureExtractor) carregado.');
+        isModelReady = true;
+        updateTrainingStatus("Pronto para treinar.");
+        
+        // Prepara o classificador [cite: 127]
+        const options = { numLabels: 4 }; // Começamos com 4, mas ele se adapta
+        classifier = featureExtractor.classification(options);
+    });
+}
+
+/**
+ * Treina o modelo de ML usando o dataset salvo no LocalStorage
+ */
+async function trainModel() {
+    if (!isModelReady) {
+        updateTrainingStatus("Modelo ainda não está pronto. Aguarde..."); // Mudar status
+        return;
+    }
+    const dataset = getDataset();
+    if (dataset.length < 2) {
+        updateTrainingStatus("Você precisa de pelo menos 2 exemplos salvos para treinar."); // Mudar status
+        return;
+    }
+
+    updateTrainingStatus("Iniciando treinamento... (adicionando exemplos)"); // Mudar status
+    
+    // ... (o loop 'for (const shape of dataset)' continua o mesmo) ...
+    for (const shape of dataset) {
+        let img = createImg(shape.bitmap, 'training image', 'anonymous', () => {
+            classifier.addImage(img, shape.label);
+            img.remove();
+        });
+        img.hide();
+    }
+
+    console.log("Exemplos adicionados. Começando o treino...");
+    updateTrainingStatus("Treinando... (calculando...)"); // Mudar status
+
+    classifier.train((lossValue) => {
+        if (lossValue) {
+            // Isso é chamado a cada época, bom para feedback
+            updateTrainingStatus(`Treinando... Perda (Loss): ${lossValue.toFixed(4)}`);
+            console.log('Perda (Loss):', lossValue);
+        } else {
+            console.log('Treinamento concluído!');
+            updateTrainingStatus('Treinamento concluído!'); // Mudar status
+        }
+    });
+}

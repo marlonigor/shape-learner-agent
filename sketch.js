@@ -2,6 +2,7 @@
 
 let clearButton;
 let saveButton;
+let trainButton;
 
 let currentShapePoints = [];
 let mainCanvas;
@@ -19,10 +20,18 @@ function setup() {
   clearButton.parent('canvas-container'); // Coloca o botão no container
   clearButton.mousePressed(clearCanvas); // Define o que acontece ao clicar
 
-  // Botão temporário para salvar um PNG (como no plano)
+  // Botão temporário para salvar um exemplo (como no plano)
   saveButton = createButton('Salvar Exemplo');
   saveButton.parent('canvas-container');
   saveButton.mousePressed(promptAndSave);
+
+  // Botão de treino
+  trainButton = createButton('Treinar Modelo');
+  trainButton.parent('canvas-container');
+  trainButton.mousePressed(trainModel);
+
+  // Inicializa
+  initML(); // chama o agent.js
 }
 
 // Função para limpar o canvas
