@@ -1,11 +1,15 @@
+// sketch.js
+
 let clearButton;
 let saveButton;
 
-// Função executada uma vez, quando o app inicia
+let currentShapePoints = [];
+let mainCanvas;
+
 function setup() {
   // Cria o canvas e o anexa ao container 'main'
-  let canvas = createCanvas(400, 400);
-  canvas.parent('canvas-container');
+  mainCanvas = createCanvas(AGENT_CONFIG.CANVAS_SIZE, AGENT_CONFIG.CANVAS_SIZE);
+  mainCanvas.parent('canvas-container');
   
   // Fundo branco
   background(255);
@@ -16,9 +20,9 @@ function setup() {
   clearButton.mousePressed(clearCanvas); // Define o que acontece ao clicar
 
   // Botão temporário para salvar um PNG (como no plano)
-  saveButton = createButton('Salvar PNG');
+  saveButton = createButton('Salvar Exemplo');
   saveButton.parent('canvas-container');
-  saveButton.mousePressed(saveDrawing);
+  saveButton.mousePressed(promptAndSave);
 }
 
 // Função para limpar o canvas
@@ -27,8 +31,17 @@ function clearCanvas() {
 }
 
 // Função para salvar o desenho (temporário)
-function saveDrawing() {
-  saveCanvas('meu_desenho', 'png');
+function promptAndSave() {
+  // Pede o rótulo [cite: 82]
+    const label = prompt("Qual o nome desta forma? (ex: circulo, triangulo)");
+    
+    if (label) {
+        // Chama a função do agent.js para salvar [cite: 43]
+        saveShape(label, currentShapePoints, mainCanvas);
+        
+        // Limpa o canvas para o próximo desenho
+        clearCanvas();
+    }
 }
 
 // Função executada em loop (desenho)
@@ -39,5 +52,7 @@ function draw() {
     strokeWeight(4);     // Espessura do traço: 4 pixels
     // Desenha uma linha do ponto anterior ao ponto atual
     line(pmouseX, pmouseY, mouseX, mouseY);
+
+    currentShapePoints.push([mouseX, mouseY]);
   }
 }
