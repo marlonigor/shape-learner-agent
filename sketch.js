@@ -8,6 +8,8 @@ let recognitionButton;
 let currentShapePoints = [];
 let mainCanvas;
 
+let canDraw = false;
+
 function setup() {
     mainCanvas = createCanvas(AGENT_CONFIG.CANVAS_SIZE, AGENT_CONFIG.CANVAS_SIZE);
     mainCanvas.parent('canvas-container');
@@ -58,32 +60,47 @@ function toggleRecognition() {
 function clearCanvas() {
   background(255);
   currentShapePoints = [];
+  canDraw = false;
 }
 
 // Função para salvar o desenho (temporário)
 function promptAndSave() {
-  // Pede o rótulo [cite: 82]
-    const label = prompt("Qual o nome desta forma? (ex: circulo, triangulo)");
+
+  canDraw = false;
+  
+  const label = prompt("Qual o nome desta forma? (ex: circulo, triangulo)");
     
-    if (label) {
-        // Chama a função do agent.js para salvar [cite: 43]
-        saveShape(label, currentShapePoints, mainCanvas);
+  if (label) {
+      // Chama a função do agent.js para salvar [cite: 43]
+      saveShape(label, currentShapePoints, mainCanvas);
         
-        // Limpa o canvas para o próximo desenho
-        clearCanvas();
-        renderDatasetView();
+      // Limpa o canvas para o próximo desenho
+      renderDatasetView();
     }
 }
 
 // Função executada em loop (desenho)
 function draw() {
-  // Se o mouse estiver pressionado, desenha
-  if (mouseIsPressed) {
-    stroke(0);           // Cor do traço: preto
-    strokeWeight(4);     // Espessura do traço: 4 pixels
-    // Desenha uma linha do ponto anterior ao ponto atual
-    line(pmouseX, pmouseY, mouseX, mouseY);
+    if (mouseIsPressed && canDraw && 
+        mouseX >= 0 && mouseX <= width && 
+        mouseY >= 0 && mouseY <= height) {
+        
+        stroke(0);
+        strokeWeight(4);
+        line(pmouseX, pmouseY, mouseX, mouseY);
+        currentShapePoints.push([mouseX, mouseY]);
+    }
+}
 
-    currentShapePoints.push([mouseX, mouseY]);
-  }
+function mousePressed() {
+    if (mouseX >= 0 && mouseX <= width && 
+        mouseY >= 0 && mouseY <= height) {
+        
+        canDraw = true;           // ← REATIVA AQUI!
+        currentShapePoints = [];  // Novo desenho
+    }
+}
+
+function mouseReleased() {
+    canDraw = false; // Desativa ao soltar o mouse
 }

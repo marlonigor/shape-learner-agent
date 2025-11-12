@@ -2,9 +2,9 @@
 
 // Configuração central do agente
 const AGENT_CONFIG = {
-    STORAGE_KEY: 'shapeDataset', // Onde salvamos no LocalStorage [cite: 22]
-    CANVAS_SIZE: 400,            // Tamanho do canvas de desenho
-    CAPTURE_SIZE: 128            // Tamanho que salvaremos para o ML [cite: 62, 116]
+    STORAGE_KEY: 'shapeDataset', // Onde salvamos no LocalStorage 
+    CANVAS_SIZE: 600,            // Tamanho do canvas de desenho
+    CAPTURE_SIZE: 128            // Tamanho que salvaremos para o ML 
 };
 
 /**
@@ -161,29 +161,25 @@ function initML() {
 }
 
 function modelLoaded() {
-    console.log('MobileNet carregado com sucesso!');
-    isModelReady = true;
-    updateTrainingStatus("Modelo pronto! Salve formas e treine.");
+    console.log('MobileNet carregado com sucesso!');
+    isModelReady = true;
+    updateTrainingStatus("Modelo pronto! Salve formas e treine.");
 
-    // Prepara o classificador
-    const options = { numLabels: 10 }; // ml5 adapta dinamicamente
-    classifier = featureExtractor.classification(options);
+    // Prepara o classificador
+    const options = { numLabels: 10 }; // ml5 adapta dinamicamente
+    classifier = featureExtractor.classification(options);
 
-    // Habilita o botão de treino
-    if (window.trainButton && trainButton.elt) {
-        trainButton.removeAttribute('disabled');
-        trainButton.elt.style.opacity = '1';
-        trainButton.elt.style.cursor = 'pointer';
-    }
+    // [CORREÇÃO] Checamos a variável global 'trainButton' diretamente,
+    // sem usar 'window.'
+    if (trainButton && trainButton.elt) {
+        trainButton.removeAttribute('disabled');
+        trainButton.elt.style.opacity = '1';
+        trainButton.elt.style.cursor = 'pointer';
+    } else {
+        console.warn("modelLoaded: A variável global 'trainButton' não foi encontrada.");
+    }
 
-    // Habilita o botão de reconhecimento
-    if (window.recognitionButton && recognitionButton.elt) {
-        recognitionButton.removeAttribute('disabled');
-        recognitionButton.elt.style.opacity = '1';
-        recognitionButton.elt.style.cursor = 'pointer';
-    }
-
-    renderDatasetView();
+    renderDatasetView();
 }
 
 /**
