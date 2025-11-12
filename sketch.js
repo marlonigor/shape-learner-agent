@@ -8,35 +8,36 @@ let currentShapePoints = [];
 let mainCanvas;
 
 function setup() {
-  // Cria o canvas e o anexa ao container 'main'
-  mainCanvas = createCanvas(AGENT_CONFIG.CANVAS_SIZE, AGENT_CONFIG.CANVAS_SIZE);
-  mainCanvas.parent('canvas-container');
-  
-  // Fundo branco
-  background(255);
+    mainCanvas = createCanvas(AGENT_CONFIG.CANVAS_SIZE, AGENT_CONFIG.CANVAS_SIZE);
+    mainCanvas.parent('canvas-container');
+    background(255);
 
-  // Botão para limpar o canvas
-  clearButton = createButton('Limpar');
-  clearButton.parent('canvas-container'); // Coloca o botão no container
-  clearButton.mousePressed(clearCanvas); // Define o que acontece ao clicar
+    // Botões
+    clearButton = createButton('Limpar');
+    clearButton.parent('canvas-container');
+    clearButton.mousePressed(clearCanvas);
 
-  // Botão temporário para salvar um exemplo (como no plano)
-  saveButton = createButton('Salvar Exemplo');
-  saveButton.parent('canvas-container');
-  saveButton.mousePressed(promptAndSave);
+    saveButton = createButton('Salvar Exemplo');
+    saveButton.parent('canvas-container');
+    saveButton.mousePressed(promptAndSave);
 
-  // Botão de treino
-  trainButton = createButton('Treinar Modelo');
-  trainButton.parent('canvas-container');
-  trainButton.mousePressed(trainModel);
+    trainButton = createButton('Treinar Modelo');
+    trainButton.parent('canvas-container');
+    trainButton.mousePressed(trainModel);
+    trainButton.attribute('disabled', '');
+    trainButton.elt.style.opacity = '0.5'; // visualmente desabilitado
+    trainButton.elt.style.cursor = 'not-allowed';
 
-  // Inicializa
-  initML(); // chama o agent.js
+    // Só inicia o ML quando tudo estiver pronto
+    setTimeout(initML, 100); // dá um respiro pro DOM
+
+    renderDatasetView();
 }
 
 // Função para limpar o canvas
 function clearCanvas() {
   background(255);
+  currentShapePoints = [];
 }
 
 // Função para salvar o desenho (temporário)
@@ -50,6 +51,7 @@ function promptAndSave() {
         
         // Limpa o canvas para o próximo desenho
         clearCanvas();
+        renderDatasetView();
     }
 }
 

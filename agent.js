@@ -70,7 +70,7 @@ function saveShape(label, points, mainCanvas) {
     saveDataset(dataset);
 
     console.log('Nova forma salva:', newShape.label, newShape.id);
-    alert(`Forma "${newShape.label}" salva!`);
+    updateTrainingStatus(`Forma "${newShape.label}" salva. Total: ${dataset.length}`);
 }
 
 // UI
@@ -136,20 +136,47 @@ let classifier;
 let isModelReady = false;
 
 // Inicializa o FeatureExtractor e o classificador
-function initML(){
-    updateTrainingStatus("Carregando modelo base...");
-    console.log("Iniciando ML...");
+function initML() {
+    // 1. Verifica se p5 e ml5 estão no window
+    if (typeof p5 === 'undefined') {
+        console.warn("p5.js ainda não carregou...");
+        setTimeout(initML, 300);
+        return;
+    }
+    if (typeof ml5 === 'undefined') {
+        console.warn("ml5.js ainda não carregou...");
+        setTimeout(initML, 300);
+        return;
+    }
 
-    // Usa o MobileNet para extrair features [cite: 65, 127]
-    featureExtractor = ml5.featureExtractor('MobileNet', () => {
-        console.log('MobileNet (FeatureExtractor) carregado.');
-        isModelReady = true;
-        updateTrainingStatus("Pronto para treinar.");
-        
-        // Prepara o classificador [cite: 127]
-        const options = { numLabels: 4 }; // Começamos com 4, mas ele se adapta
-        classifier = featureExtractor.classification(options);
-    });
+    updateTrainingStatus("Carregando MobileNet...");
+    console.log("p5 e ml5 detectados! Iniciando ML...");
+
+    try {
+        featureExtractor = ml5.featureExtractor('MobileNet', modelLoaded);
+    } catch (e) {
+        updateTrainingStatus("Erro ao carregar MobileNet: " + e.message);
+        console.error(e);
+    }
+}
+
+function modelLoaded() {
+    console.log('MobileNet carregado com sucesso!');
+    isModelReady = true;
+    updateTrainingStatus("Modelo pronto! Salve formas e treine.");
+
+    // Prepara o classificador
+    const options = { numLabels: 10 }; // ml5 adapta dinamicamente
+    classifier = featureExtractor.classification(options);
+
+    // Habilita o botão de treino
+    if (window.trainButton && trainButton.elt) {
+        trainButton.removeAttribute('disabled');
+        trainButton.elt.style.opacity = '1';
+        trainButton.elt.style.cursor = 'pointer';
+    }
+
+    renderDatasetView();
 }
 
 /**
