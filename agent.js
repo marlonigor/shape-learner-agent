@@ -71,14 +71,26 @@ function renderDatasetView() {
     listEl.innerHTML = '';
     
     for (const label in groups) {
-        const shapes = groups[label];
-        let groupHTML = `<div class="dataset-group">`;
-        groupHTML += `<strong>${label}</strong> (${shapes.length}x)`;
-        groupHTML += `<div class="mini-grid">`;
-        
-        shapes.forEach(shape => {
-            groupHTML += `<img src="${shape.bitmap}" alt="${label}" title="${shape.id}">`;
-        });
+        const shapes = groups[label];
+        let groupHTML = `<div class="dataset-group">`;
+        groupHTML += `<strong>${label}</strong> (${shapes.length}x)`;
+        groupHTML += `<div class="mini-grid">`;
+        
+        // --- MODIFICAÇÃO AQUI ---
+        shapes.forEach(shape => {
+            // Adicionamos um container e um botão com 'onclick'
+            groupHTML += `
+                <div class="thumbnail-container">
+                    <img src="${shape.bitmap}" alt="${label}" title="${shape.id}">
+                    <button 
+                        class="delete-btn" 
+                        onclick="handleDeleteShape('${shape.id}', '${label}')"
+                    >
+                        X
+                    </button>
+                </div>
+            `;
+        });
         
         groupHTML += `</div></div>`;
         listEl.innerHTML += groupHTML;
@@ -318,4 +330,39 @@ function loopClassification() {
     }
     
     classifyCanvas();
+}
+
+/**
+ * NOVO: Deleta uma forma específica do dataset
+ * Esta função é chamada pelo 'onclick' do botão 'X'
+ * @param {string} shapeId - O ID (UUID) da forma a ser deletada
+ * @param {string} label - O rótulo (apenas para a mensagem de log)
+ */
+function handleDeleteShape(shapeId, label) {
+    if (!shapeId) return;
+
+    // Pedir confirmação
+    if (!confirm(`Tem certeza que quer deletar este exemplo de "${label}"?`)) {
+        return;
+    }
+
+    try {
+        let dataset = getDataset();
+        
+        // Filtra o dataset, mantendo todos, EXCETO o que tem o ID correspondente
+        const newDataset = dataset.filter(shape => shape.id !== shapeId);
+
+        // Salva o novo dataset (menor) no LocalStorage
+        saveDataset(newDataset);
+
+        // Atualiza a UI para refletir a mudança
+        renderDatasetView();
+
+        updateTrainingStatus(`Exemplo de "${label}" deletado. Total: ${newDataset.length}`);
+        console.log(`Exemplo ${shapeId} (${label}) deletado.`);
+
+    } catch (e) {
+        console.error("Erro ao deletar forma:", e);
+        updateTrainingStatus("Erro ao deletar exemplo.");
+    }
 }
