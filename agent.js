@@ -309,44 +309,59 @@ async function classifyCanvas() {
 }
 
 function updatePredictionUI(results) {
-    const el = document.getElementById('prediction-output');
-    if (!el) return;
+    const el = document.getElementById('prediction-output');
+    if (!el) return;
 
     el.classList.remove('critic-confident', 'critic-unsure', 'critic-confused');
 
-    if (!results || !isClassifying) {
-        el.innerHTML = 'Predição: (desligado)';
-        return;
-    }
+    if (!results || !isClassifying) {
+        el.innerHTML = 'Predição: (desligado)';
+        return;
+    }
 
-    const bestResult = results[0];
+    const bestResult = results[0];
     const label = bestResult.label;
-    const confidence = bestResult.confidence;
+    const confidence = bestResult.confidence;
     
-    if (confidence >= 0.85) { 
+    let feedbackHTML = '';
+
+    if (confidence >= 0.85) {
         feedbackHTML = `
             <strong>Certeza: ${label}</strong> 
             (${(confidence * 100).toFixed(0)}%)
         `;
         el.classList.add('critic-confident');
 
-    } else if (confidence >= 0.60 && confidence < 0.85) { 
+    } else if (confidence >= 0.60 && confidence < 0.85) {
         feedbackHTML = `
             Acho que é... <strong>${label}?</strong>
             (${(confidence * 100).toFixed(0)}%)
         `;
         el.classList.add('critic-unsure');
 
-    } else { // Confiança < 0.6 
+    } else { 
+        // --- GERADOR DE PROBLEMAS ATIVADO  ---
+        
         feedbackHTML = `
             Não tenho certeza... <strong>(${label}?)</strong>
             (${(confidence * 100).toFixed(0)}%)
-            <br><small>Isso é uma forma nova?</small>
+            <br><small>O que você quer fazer?</small>
+            <div class="critic-actions">
+                <button class="critic-button" onclick="promptAndSave('${label}')">Salvar como "${label}"</button>
+                <button class="critic-button" onclick="promptAndSave()">Salvar como (Outro)</button>
+            </div>
         `;
         el.classList.add('critic-confused');
+        
+        // 2. Para o loop de classificação
+        // toggleRecognition() é global (do sketch.js) e vai
+        // inverter isClassifying para 'false' e parar o loop.
+        if (typeof toggleRecognition === 'function') {
+            toggleRecognition();
+        }
     }
     
-    el.innerHTML = feedbackHTML;
+    el.innerHTML = feedbackHTML;
 }
 
 function loopClassification() {

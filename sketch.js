@@ -63,19 +63,22 @@ function clearCanvas() {
   canDraw = false;
 }
 
-// Função para salvar o desenho (temporário)
-function promptAndSave() {
 
-  canDraw = false;
+
+/**
+ * @param {string | null} suggestedLabel - O rótulo sugerido pelo crítico.
+ */
+function promptAndSave(suggestedLabel = null) {
+    canDraw = false;
   
-  const label = prompt("Qual o nome desta forma? (ex: circulo, triangulo)");
+    // Se uma sugestão foi dada, usa ela. Senão, fica em branco.
+    const defaultLabel = suggestedLabel || "";
+    const label = prompt("Qual o nome desta forma? (ex: circulo, triangulo)", defaultLabel);
     
-  if (label) {
-      // Chama a função do agent.js para salvar [cite: 43]
-      saveShape(label, currentShapePoints, mainCanvas);
-        
-      // Limpa o canvas para o próximo desenho
-      renderDatasetView();
+    if (label) {
+        saveShape(label, currentShapePoints, mainCanvas);
+        clearCanvas(); // <-- Bug de limpeza de canvas que corrigimos
+        renderDatasetView();
     }
 }
 
