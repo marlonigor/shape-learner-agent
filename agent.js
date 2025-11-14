@@ -101,7 +101,8 @@ function renderDatasetView() {
     }
 }
 
-// Machine Learning com TensorFlow.js PURO
+// Machine Learning 
+
 let mobilenetModel;
 let customModel;
 let isModelReady = false;
@@ -109,38 +110,72 @@ let isClassifying = false;
 let labelMap = {};
 let reverseLabelMap = {};
 
-async function initML() {
-    if (typeof p5 === 'undefined') {
-        console.warn("p5.js ainda não carregou...");
-        setTimeout(initML, 300);
-        return;
-    }
-    if (typeof tf === 'undefined' || typeof mobilenet === 'undefined') {
-        console.warn("TensorFlow.js ainda não carregou...");
-        setTimeout(initML, 300);
-        return;
-    }
+const MODEL_STORAGE_PATH = 'indexeddb://shape-learner-model';
 
-    updateTrainingStatus("Carregando MobileNet...");
-    console.log("TensorFlow.js detectado! Iniciando ML...");
+async function initML() {
+    if (typeof p5 === 'undefined' || typeof tf === 'undefined' || typeof mobilenet === 'undefined') {
+        console.warn("Bibliotecas ainda não carregaram...");
+        setTimeout(initML, 300);
+        return;
+    }
+    
+    updateTrainingStatus("Procurando modelo salvo...");
+    console.log("Iniciando ML, procurando modelo salvo...");
 
     try {
+        // --- A MÁGICA DO TF.JS ---
+        // Tenta carregar o modelo customizado do IndexedDB
+        customModel = await tf.loadLayersModel(MODEL_STORAGE_PATH);
+        
+        // Se carregar, também precisamos do mobilenet para features
         mobilenetModel = await mobilenet.load();
-        console.log('MobileNet carregado com sucesso!');
+        
+        console.log("Modelo customizado carregado do IndexedDB!");
+        updateTrainingStatus("Modelo salvo encontrado e carregado!");
+        
+        // Atualiza os labels (mapa) com base no dataset salvo
+        // (O modelo só não sabe os nomes, só os índices)
+        const dataset = getDataset();
+        const uniqueLabels = [...new Set(dataset.map(s => s.label))];
+        uniqueLabels.forEach((label, idx) => {
+            labelMap[idx] = label;
+            reverseLabelMap[label] = idx;
+        });
+        
         isModelReady = true;
-        updateTrainingStatus("Modelo pronto! Salve formas e treine.");
 
-        if (typeof trainButton !== 'undefined' && trainButton && trainButton.elt) {
-            trainButton.removeAttribute('disabled');
-            trainButton.elt.style.opacity = '1';
-            trainButton.elt.style.cursor = 'pointer';
-        }
-
-        renderDatasetView();
     } catch (e) {
-        updateTrainingStatus("Erro ao carregar MobileNet: " + e.message);
-        console.error(e);
+        // Se der erro (ex: modelo não existe), carrega o MobileNet
+        console.warn("Nenhum modelo salvo. Carregando MobileNet base...");
+        try {
+            mobilenetModel = await mobilenet.load();
+            console.log('MobileNet carregado com sucesso!');
+            isModelReady = true;
+            updateTrainingStatus("Modelo pronto! Salve formas e treine.");
+        } catch (e2) {
+            updateTrainingStatus("Erro ao carregar MobileNet: " + e2.message);
+            console.error(e2);
+            return;
+        }
     }
+    
+    // Habilita os botões de qualquer forma (seja modelo salvo ou não)
+    if (typeof trainButton !== 'undefined' && trainButton && trainButton.elt) {
+        trainButton.removeAttribute('disabled');
+        trainButton.elt.style.opacity = '1';
+        trainButton.elt.style.cursor = 'pointer';
+    }
+    
+    // Se o modelo customizado foi carregado, habilita o reconhecimento
+    if (customModel) {
+        if (typeof recognitionButton !== 'undefined' && recognitionButton && recognitionButton.elt) {
+            recognitionButton.removeAttribute('disabled');
+            recognitionButton.elt.style.opacity = '1';
+            recognitionButton.elt.style.cursor = 'pointer';
+        }
+    }
+
+    renderDatasetView();
 }
 
 // Converte bitmap para tensor
@@ -171,104 +206,118 @@ async function extractFeatures(imageTensor) {
 
 async function trainModel() {
     if (!isModelReady) {
-        updateTrainingStatus("Modelo ainda não está pronto. Aguarde...");
-        return;
-    }
-    
-    const dataset = getDataset();
-    if (dataset.length < 2) {
-        updateTrainingStatus("Você precisa de pelo menos 2 exemplos salvos para treinar.");
-        return;
-    }
+        updateTrainingStatus("Modelo ainda não está pronto. Aguarde...");
+        return;
+    }
+    
+    const dataset = getDataset();
+    if (dataset.length < 2) {
+        updateTrainingStatus("Você precisa de pelo menos 2 exemplos salvos para treinar.");
+        return;
+    }
 
-    updateTrainingStatus("Extraindo features das imagens...");
-    
-    const features = [];
-    const labels = [];
-    const uniqueLabels = [...new Set(dataset.map(s => s.label))];
-    
-    labelMap = {};
-    reverseLabelMap = {};
-    uniqueLabels.forEach((label, idx) => {
-        labelMap[idx] = label;
-        reverseLabelMap[label] = idx;
-    });
-    
-    console.log('Labels encontrados:', uniqueLabels);
-    
-    for (let i = 0; i < dataset.length; i++) {
-        const shape = dataset[i];
-        try {
-            const imageTensor = await bitmapToTensor(shape.bitmap);
-            const feature = await extractFeatures(imageTensor);
-            
-            features.push(feature);
-            labels.push(reverseLabelMap[shape.label]);
-            
-            imageTensor.dispose();
-            
-            console.log(`✓ Features extraídas: ${shape.label} (${i + 1}/${dataset.length})`);
-            updateTrainingStatus(`Extraindo features... ${i + 1}/${dataset.length}`);
-        } catch (err) {
-            console.error(`✗ Erro ao processar ${shape.label}:`, err);
-        }
-    }
-    
-    if (features.length === 0) {
-        updateTrainingStatus("Erro: Nenhuma feature foi extraída.");
-        return;
-    }
+    updateTrainingStatus("Extraindo features das imagens...");
+    
+    const features = [];
+    const labels = [];
+    const uniqueLabels = [...new Set(dataset.map(s => s.label))];
+    
+    labelMap = {};
+    reverseLabelMap = {};
+    uniqueLabels.forEach((label, idx) => {
+        labelMap[idx] = label;
+        reverseLabelMap[label] = idx;
+    });
+    
+    console.log('Labels encontrados:', uniqueLabels);
+    
+    for (let i = 0; i < dataset.length; i++) {
+        const shape = dataset[i];
+        try {
+            const imageTensor = await bitmapToTensor(shape.bitmap);
+            const feature = await extractFeatures(imageTensor);
+            
+            features.push(feature);
+            labels.push(reverseLabelMap[shape.label]);
+            
+            imageTensor.dispose();
+            
+            console.log(`✓ Features extraídas: ${shape.label} (${i + 1}/${dataset.length})`);
+            updateTrainingStatus(`Extraindo features... ${i + 1}/${dataset.length}`);
+        } catch (err) {
+            console.error(`✗ Erro ao processar ${shape.label}:`, err);
+        }
+    }
+    
+    if (features.length === 0) {
+        updateTrainingStatus("Erro: Nenhuma feature foi extraída.");
+        return;
+    }
 
-    const xs = tf.concat(features);
-    const ys = tf.oneHot(tf.tensor1d(labels, 'int32'), uniqueLabels.length);
-    
-    features.forEach(f => f.dispose());
-    
-    console.log('Shape dos dados:', xs.shape, ys.shape);
-    updateTrainingStatus("Construindo modelo neural...");
-    
-    customModel = tf.sequential({
-        layers: [
-            tf.layers.dense({ units: 128, activation: 'relu', inputShape: [xs.shape[1]] }),
-            tf.layers.dropout({ rate: 0.5 }),
-            tf.layers.dense({ units: uniqueLabels.length, activation: 'softmax' })
-        ]
-    });
-    
-    customModel.compile({
-        optimizer: tf.train.adam(0.001),
-        loss: 'categoricalCrossentropy',
-        metrics: ['accuracy']
-    });
-    
-    console.log('Iniciando treinamento...');
-    updateTrainingStatus("Treinando modelo neural...");
-    
-    try {
-        await customModel.fit(xs, ys, {
-            epochs: 50,
-            batchSize: 8,
-            validationSplit: 0.1,
-            shuffle: true,
-            callbacks: {
-                onEpochEnd: (epoch, logs) => {
-                    console.log(`Epoch ${epoch + 1}: loss = ${logs.loss.toFixed(4)}, acc = ${logs.acc.toFixed(4)}`);
-                    updateTrainingStatus(`Treinando... Epoch ${epoch + 1}/50 - Loss: ${logs.loss.toFixed(4)}`);
+    const xs = tf.concat(features);
+    const ys = tf.oneHot(tf.tensor1d(labels, 'int32'), uniqueLabels.length);
+    
+    features.forEach(f => f.dispose());
+    
+    console.log('Shape dos dados:', xs.shape, ys.shape);
+    updateTrainingStatus("Construindo modelo neural...");
+    
+    customModel = tf.sequential({
+        layers: [
+            tf.layers.dense({ units: 128, activation: 'relu', inputShape: [xs.shape[1]] }),
+            tf.layers.dropout({ rate: 0.5 }),
+            tf.layers.dense({ units: uniqueLabels.length, activation: 'softmax' })
+        ]
+    });
+    
+    customModel.compile({
+        optimizer: tf.train.adam(0.001),
+        loss: 'categoricalCrossentropy',
+        metrics: ['accuracy']
+    });
+    
+    console.log('Iniciando treinamento...');
+    updateTrainingStatus("Treinando modelo neural...");
+    
+    try {
+        await customModel.fit(xs, ys, {
+            epochs: 50,
+            batchSize: 8,
+            validationSplit: 0.1,
+            shuffle: true,
+            callbacks: {
+                onEpochEnd: (epoch, logs) => {
+                    console.log(`Epoch ${epoch + 1}: loss = ${logs.loss.toFixed(4)}, acc = ${logs.acc.toFixed(4)}`);
+                    updateTrainingStatus(`Treinando... Epoch ${epoch + 1}/50 - Loss: ${logs.loss.toFixed(4)}`);
+                },
+                
+                // --- [NOVA MUDANÇA AQUI] ---
+                onTrainEnd: async () => {
+                    // Salva o modelo no IndexedDB
+                    try {
+                        await customModel.save(MODEL_STORAGE_PATH);
+                        console.log(`✓ Modelo salvo em ${MODEL_STORAGE_PATH}`);
+                        updateTrainingStatus('✓ Modelo treinado e salvo!');
+                    } catch (e) {
+                        console.error("Erro ao salvar o modelo:", e);
+                    }
+                    
+                    // Habilita o reconhecimento
+                    if (typeof recognitionButton !== 'undefined' && recognitionButton && recognitionButton.elt) {
+                        recognitionButton.removeAttribute('disabled');
+                        recognitionButton.elt.style.opacity = '1';
+                        recognitionButton.elt.style.cursor = 'pointer';
+                    }
                 }
-            }
+                // --- [FIM DA MUDANÇA] ---
+           }
         });
+    
         
         xs.dispose();
         ys.dispose();
         
-        console.log('✓ Treinamento concluído!');
-        updateTrainingStatus('✓ Modelo treinado com sucesso!');
-        
-        if (typeof recognitionButton !== 'undefined' && recognitionButton && recognitionButton.elt) {
-            recognitionButton.removeAttribute('disabled');
-            recognitionButton.elt.style.opacity = '1';
-            recognitionButton.elt.style.cursor = 'pointer';
-        }
+
     } catch (err) {
         updateTrainingStatus("Erro no treinamento: " + err.message);
         console.error("Erro:", err);
