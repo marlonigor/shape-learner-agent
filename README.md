@@ -4,7 +4,7 @@ Um **agente de IA leve**, rodando **100% no navegador**, que **aprende por demon
 
 Este projeto usa um **pipeline de transfer learning** para treinar um modelo de rede neural que reconhece seus desenhos à mão – **sem precisar de servidor**.
 
-## 🚀 Funcionalidades
+## Funcionalidades
 
 - **Aprendizado por Demonstração**  
   No modo *Treinamento*, você desenha uma forma, dá um rótulo (ex: `"círculo"`) e salva no dataset **local**.
@@ -28,7 +28,7 @@ Este projeto usa um **pipeline de transfer learning** para treinar um modelo de 
   - Modelo treinado ("cérebro" de IA) → salvo no **IndexedDB** (pesos)
 
 
-## 🛠️ Tecnologias Utilizadas
+## Tecnologias Utilizadas
 
 | Tecnologia | Uso |
 |------------|-----|
