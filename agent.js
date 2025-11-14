@@ -277,6 +277,15 @@ async function trainModel() {
 
 async function classifyCanvas() {
     if (!customModel || !isClassifying) return;
+
+    if (currentShapePoints.length === 0){
+        updatePredictionUI(null);
+
+        if (isClassifying){
+            setTimeout(classifyCanvas, 500);
+        }
+        return;
+    }
     
     try {
         const bitmap = captureBitmap(mainCanvas);
@@ -309,19 +318,19 @@ async function classifyCanvas() {
 }
 
 function updatePredictionUI(results) {
-    const el = document.getElementById('prediction-output');
-    if (!el) return;
+    const el = document.getElementById('prediction-output');
+    if (!el) return;
 
     el.classList.remove('critic-confident', 'critic-unsure', 'critic-confused');
 
-    if (!results || !isClassifying) {
-        el.innerHTML = 'Predição: (desligado)';
-        return;
-    }
+    if (!results || !isClassifying) {
+        el.innerHTML = 'Predição: (desligado)';
+        return;
+    }
 
-    const bestResult = results[0];
+    const bestResult = results[0];
     const label = bestResult.label;
-    const confidence = bestResult.confidence;
+    const confidence = bestResult.confidence;
     
     let feedbackHTML = '';
 
@@ -356,9 +365,9 @@ function updatePredictionUI(results) {
         // 2. Para o loop de classificação
         // toggleRecognition() é global (do sketch.js) e vai
         // inverter isClassifying para 'false' e parar o loop.
-        if (typeof toggleRecognition === 'function') {
-            toggleRecognition();
-        }
+       //if (typeof toggleRecognition === 'function') {
+          //  toggleRecognition();
+        //}
     }
     
     el.innerHTML = feedbackHTML;
