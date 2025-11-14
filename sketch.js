@@ -4,10 +4,8 @@ let clearButton;
 let saveButton;
 let trainButton;
 let recognitionButton;
-
 let currentShapePoints = [];
 let mainCanvas;
-
 let canDraw = false;
 
 function setup() {
@@ -33,16 +31,12 @@ function setup() {
     trainButton.addClass('control-button'); 
     trainButton.addClass('btn-primary');    
     trainButton.attribute('disabled', '');
-    trainButton.elt.style.opacity = '0.5'; 
-    trainButton.elt.style.cursor = 'not-allowed';
 
     recognitionButton = createButton('Iniciar Reconhecimento');
     recognitionButton.parent('button-container');
     recognitionButton.mousePressed(toggleRecognition);
     recognitionButton.addClass('control-button');
     recognitionButton.attribute('disabled', ''); 
-    recognitionButton.elt.style.opacity = '0.5';
-    recognitionButton.elt.style.cursor = 'not-allowed';
 
     // Só inicia o ML quando tudo estiver pronto
     setTimeout(initML, 100); // dá um respiro pro DOM
