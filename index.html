@@ -58,7 +58,6 @@
         text-align: center;
         transition: background-color 0.3s;
     }
-
     .critic-confident {
         background-color: #e6ffed; 
         border-color: #b7ebc0;
@@ -87,10 +86,11 @@
     .critic-button:hover {
         background-color: #e0e0e0;
     }
-
     #dataset-view h3 { 
         margin-top: 0; 
-        margin-bottom: 10px; }
+        margin-bottom: 10px; 
+        text-align: center;
+    }
     #dataset-list { 
         display: flex; 
         flex-wrap: wrap; 
@@ -105,19 +105,23 @@
         border: 1px solid #ddd; 
         padding: 8px; 
         border-radius: 4px; 
-        background-color: white; }
+        background-color: white; 
+    }
     .dataset-group strong { 
         display: block; 
-        margin-bottom: 5px; }
+        margin-bottom: 5px; 
+    }
     .dataset-group .mini-grid { 
         display: flex; 
         flex-wrap: wrap; 
-        gap: 4px; }
+        gap: 4px; 
+    }
     .dataset-group img { 
         width: 32px; 
         height: 32px; 
         object-fit: cover; 
-        border: 1px solid #eee; }
+        border: 1px solid #eee; 
+    }
     .delete-btn {
         position: absolute;
         top: -5px;
@@ -138,7 +142,7 @@
     }
     .delete-btn:hover {
         opacity: 1;
-        }
+    }
     
     .thumbnail-container {
         position: relative;
@@ -160,7 +164,7 @@
         Predição: (desligado)
     </div>
     <div id="dataset-view">
-      <h3>Dataset Salvo</h3>
+      <h3>Dataset</h3>
       <div id="dataset-list">
         <p>Carregando dataset...</p>
       </div>
