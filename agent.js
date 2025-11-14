@@ -71,15 +71,15 @@ function renderDatasetView() {
     listEl.innerHTML = '';
     
     for (const label in groups) {
-        const shapes = groups[label];
-        let groupHTML = `<div class="dataset-group">`;
-        groupHTML += `<strong>${label}</strong> (${shapes.length}x)`;
-        groupHTML += `<div class="mini-grid">`;
-        
+        const shapes = groups[label];
+        let groupHTML = `<div class="dataset-group">`;
+        groupHTML += `<strong>${label}</strong> (${shapes.length}x)`;
+        groupHTML += `<div class="mini-grid">`;
+        
         // --- MODIFICAÇÃO AQUI ---
-        shapes.forEach(shape => {
+        shapes.forEach(shape => {
             // Adicionamos um container e um botão com 'onclick'
-            groupHTML += `
+            groupHTML += `
                 <div class="thumbnail-container">
                     <img src="${shape.bitmap}" alt="${label}" title="${shape.id}">
                     <button 
@@ -90,7 +90,7 @@ function renderDatasetView() {
                     </button>
                 </div>
             `;
-        });
+        });
         
         groupHTML += `</div></div>`;
         listEl.innerHTML += groupHTML;
@@ -161,7 +161,7 @@ async function bitmapToTensor(bitmap) {
     });
 }
 
-// ← CORRIGIDO: Extrai features usando MobileNet
+// Extrai features usando MobileNet
 async function extractFeatures(imageTensor) {
     // O MobileNet do TensorFlow retorna um embedding direto
     // Usamos o método infer() para pegar as features intermediárias
@@ -312,15 +312,41 @@ function updatePredictionUI(results) {
     const el = document.getElementById('prediction-output');
     if (!el) return;
 
+    el.classList.remove('critic-confident', 'critic-unsure', 'critic-confused');
+
     if (!results || !isClassifying) {
         el.innerHTML = 'Predição: (desligado)';
         return;
     }
 
     const bestResult = results[0];
-    const confidence = Math.floor(bestResult.confidence * 100);
+    const label = bestResult.label;
+    const confidence = bestResult.confidence;
     
-    el.innerHTML = `Predição: <strong>${bestResult.label}</strong> (${confidence}%)`;
+    if (confidence >= 0.85) { 
+        feedbackHTML = `
+            <strong>Certeza: ${label}</strong> 
+            (${(confidence * 100).toFixed(0)}%)
+        `;
+        el.classList.add('critic-confident');
+
+    } else if (confidence >= 0.60 && confidence < 0.85) { 
+        feedbackHTML = `
+            Acho que é... <strong>${label}?</strong>
+            (${(confidence * 100).toFixed(0)}%)
+        `;
+        el.classList.add('critic-unsure');
+
+    } else { // Confiança < 0.6 
+        feedbackHTML = `
+            Não tenho certeza... <strong>(${label}?)</strong>
+            (${(confidence * 100).toFixed(0)}%)
+            <br><small>Isso é uma forma nova?</small>
+        `;
+        el.classList.add('critic-confused');
+    }
+    
+    el.innerHTML = feedbackHTML;
 }
 
 function loopClassification() {
@@ -333,7 +359,7 @@ function loopClassification() {
 }
 
 /**
- * NOVO: Deleta uma forma específica do dataset
+ Deleta uma forma específica do dataset
  * Esta função é chamada pelo 'onclick' do botão 'X'
  * @param {string} shapeId - O ID (UUID) da forma a ser deletada
  * @param {string} label - O rótulo (apenas para a mensagem de log)
