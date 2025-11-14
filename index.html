@@ -124,24 +124,29 @@
     }
     .delete-btn {
         position: absolute;
-        top: -5px;
-        right: -5px;
-        background-color: #ff4d4d;
+        top: -4px;
+        right: -4px;
+        background-color: #e63946;
         color: white;
-        border: none;
+        border: 1px solid white;
         border-radius: 50%;
-        width: 20px;
-        height: 20px;
-        font-size: 12px;
+        width: 18px;
+        height: 18px;
+        font-size: 10px;
         font-weight: bold;
         cursor: pointer;
         padding: 0;
-        line-height: 20px;
-        opacity: 0.7;
-        transition: opacity 0.2s;
+        line-height: 16px;
+        opacity: 0.0;
+        transition: opacity 0.2s ease-in-out;
+        z-index: 10;
     }
     .delete-btn:hover {
         opacity: 1;
+    }
+
+    .thumbnail-container:hover .delete-btn{
+        opacity:1;
     }
     
     .thumbnail-container {
