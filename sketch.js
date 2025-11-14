@@ -24,9 +24,8 @@ function setup() {
 
     saveButton = createButton('Salvar Exemplo');
     saveButton.parent('button-container');
-    saveButton.mousePressed(() => { promptAndSave(); 
+    saveButton.mousePressed(() => { promptAndSave(); });
     saveButton.addClass('control-button');
-});
 
     trainButton = createButton('Treinar Modelo');
     trainButton.parent('button-container');
