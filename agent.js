@@ -1,4 +1,4 @@
-// agent.js - CORRIGIDO
+// agent.js
 
 const AGENT_CONFIG = {
     STORAGE_KEY: 'shapeDataset',
@@ -76,7 +76,6 @@ function renderDatasetView() {
         groupHTML += `<strong>${label}</strong> (${shapes.length}x)`;
         groupHTML += `<div class="mini-grid">`;
         
-        // --- MODIFICAÇÃO AQUI ---
         shapes.forEach(shape => {
             // Adicionamos um container e um botão com 'onclick'
             groupHTML += `
@@ -102,7 +101,6 @@ function renderDatasetView() {
 }
 
 // Machine Learning 
-
 let mobilenetModel;
 let customModel;
 let isModelReady = false;
@@ -123,7 +121,6 @@ async function initML() {
     console.log("Iniciando ML, procurando modelo salvo...");
 
     try {
-        // --- A MÁGICA DO TF.JS ---
         // Tenta carregar o modelo customizado do IndexedDB
         customModel = await tf.loadLayersModel(MODEL_STORAGE_PATH);
         
@@ -162,16 +159,12 @@ async function initML() {
     // Habilita os botões de qualquer forma (seja modelo salvo ou não)
     if (typeof trainButton !== 'undefined' && trainButton && trainButton.elt) {
         trainButton.removeAttribute('disabled');
-        trainButton.elt.style.opacity = '1';
-        trainButton.elt.style.cursor = 'pointer';
     }
     
     // Se o modelo customizado foi carregado, habilita o reconhecimento
     if (customModel) {
         if (typeof recognitionButton !== 'undefined' && recognitionButton && recognitionButton.elt) {
             recognitionButton.removeAttribute('disabled');
-            recognitionButton.elt.style.opacity = '1';
-            recognitionButton.elt.style.cursor = 'pointer';
         }
     }
 
@@ -291,7 +284,6 @@ async function trainModel() {
                     updateTrainingStatus(`Treinando... Epoch ${epoch + 1}/50 - Loss: ${logs.loss.toFixed(4)}`);
                 },
                 
-                // --- [NOVA MUDANÇA AQUI] ---
                 onTrainEnd: async () => {
                     // Salva o modelo no IndexedDB
                     try {
@@ -305,11 +297,8 @@ async function trainModel() {
                     // Habilita o reconhecimento
                     if (typeof recognitionButton !== 'undefined' && recognitionButton && recognitionButton.elt) {
                         recognitionButton.removeAttribute('disabled');
-                        recognitionButton.elt.style.opacity = '1';
-                        recognitionButton.elt.style.cursor = 'pointer';
                     }
                 }
-                // --- [FIM DA MUDANÇA] ---
            }
         });
     

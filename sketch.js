@@ -19,23 +19,29 @@ function setup() {
     clearButton = createButton('Limpar');
     clearButton.parent('button-container');
     clearButton.mousePressed(clearCanvas);
+    clearButton.addClass('control-button'); 
+    clearButton.addClass('btn-danger');     
 
     saveButton = createButton('Salvar Exemplo');
     saveButton.parent('button-container');
     saveButton.mousePressed(() => { promptAndSave(); 
+    saveButton.addClass('control-button');
 });
 
     trainButton = createButton('Treinar Modelo');
     trainButton.parent('button-container');
     trainButton.mousePressed(trainModel);
+    trainButton.addClass('control-button'); 
+    trainButton.addClass('btn-primary');    
     trainButton.attribute('disabled', '');
-    trainButton.elt.style.opacity = '0.5'; // visualmente desabilitado
+    trainButton.elt.style.opacity = '0.5'; 
     trainButton.elt.style.cursor = 'not-allowed';
 
     recognitionButton = createButton('Iniciar Reconhecimento');
     recognitionButton.parent('button-container');
     recognitionButton.mousePressed(toggleRecognition);
-    recognitionButton.attribute('disabled', ''); // Desabilitado até o modelo treinar
+    recognitionButton.addClass('control-button');
+    recognitionButton.attribute('disabled', ''); 
     recognitionButton.elt.style.opacity = '0.5';
     recognitionButton.elt.style.cursor = 'not-allowed';
 
